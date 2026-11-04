@@ -4,7 +4,7 @@ Description=CrownOS Process Monitor privileged helper
 [Service]
 Type=dbus
 BusName=org.crownos.ProcessMonitor1
-ExecStart=/usr/lib/crownos/monitor-helper
+ExecStart=/usr/bin/crownos-process-monitor-helper
 ProtectSystem=strict
 ProtectHome=read-only
 PrivateTmp=yes

@@ -11,7 +11,7 @@ use zbus::fdo::{DBusProxy, NameOwnerChangedStream};
 fn main() -> Result<()> {
     if !rustix::process::geteuid().is_root() {
         bail!(
-            "monitor-helper must run as root; the system bus starts it on demand \
+            "crownos-process-monitor-helper must run as root; the system bus starts it on demand \
              for org.crownos.ProcessMonitor1"
         );
     }
@@ -72,7 +72,7 @@ async fn serve_until_idle<A: Authorizer>(
                 if arguments.new_owner().is_none()
                     && let Err(error) = state.client_departed(arguments.name())
                 {
-                    eprintln!("monitor-helper: restoring fans of {} failed: {error}", arguments.name());
+                    eprintln!("crownos-process-monitor-helper: restoring fans of {} failed: {error}", arguments.name());
                 }
             }
             _ = terminate.recv() => return Ok(()),

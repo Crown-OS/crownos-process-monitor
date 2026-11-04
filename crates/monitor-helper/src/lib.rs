@@ -3,10 +3,10 @@
 //! behind a replaceable authorization backend, plus [`HelperClient`] for
 //! the engine.
 //!
-//! Installation: the binary goes to `/usr/lib/crownos/monitor-helper`;
+//! Installation: the binary goes to `/usr/bin/crownos-process-monitor-helper`;
 //! `data/org.crownos.ProcessMonitor1.conf` to `/usr/share/dbus-1/system.d/`,
 //! `data/org.crownos.ProcessMonitor1.service` to
-//! `/usr/share/dbus-1/system-services/`, `data/crownos-monitor-helper.service`
+//! `/usr/share/dbus-1/system-services/`, `data/crownos-process-monitor-helper.service`
 //! to `/usr/lib/systemd/system/` and `data/org.crownos.process-monitor.policy`
 //! to `/usr/share/polkit-1/actions/`. Builds without the `polkit` feature read
 //! `/etc/crownos/process-monitor-helper.rules` instead (see

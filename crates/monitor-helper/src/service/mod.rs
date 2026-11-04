@@ -102,7 +102,7 @@ impl<A: Authorizer> ProcessMonitor<A> {
             .await
             .unwrap_or(false);
         if !present && let Err(error) = self.state.client_departed(sender.as_str()) {
-            eprintln!("monitor-helper: restoring fans of {sender} failed: {error}");
+            eprintln!("crownos-process-monitor-helper: restoring fans of {sender} failed: {error}");
         }
     }
 }

@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "monitor-helper"
+name = "crownos-process-monitor-helper"
 path = "src/main.rs"
 
 [features]
