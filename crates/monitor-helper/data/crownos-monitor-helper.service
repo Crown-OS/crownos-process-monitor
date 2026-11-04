@@ -1,0 +1,13 @@
+[Unit]
+Description=CrownOS Process Monitor privileged helper
+
+[Service]
+Type=dbus
+BusName=org.crownos.ProcessMonitor1
+ExecStart=/usr/lib/crownos/monitor-helper
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_SYS_PTRACE CAP_DAC_READ_SEARCH CAP_KILL CAP_SYS_NICE CAP_BPF CAP_PERFMON CAP_NET_ADMIN CAP_SYS_RESOURCE
+ReadWritePaths=/sys/class/hwmon /sys/devices

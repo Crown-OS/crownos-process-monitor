@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>CrownOS</vendor>
+  <vendor_url>https://crownos.org</vendor_url>
+
+  <action id="org.crownos.process-monitor.read-metrics">
+    <description>Read resource usage of every process</description>
+    <message>Process Monitor wants to measure processes of all users</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+
+  <action id="org.crownos.process-monitor.control-fans">
+    <description>Set fan speeds</description>
+    <message>Authentication is required to change fan speeds</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
+  <action id="org.crownos.process-monitor.signal-other-users">
+    <description>Quit or change processes of other users</description>
+    <message>Authentication is required to control another user's process</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

@@ -1,0 +1,8 @@
+# Policy for builds without polkit (cargo build --no-default-features).
+# Install as /etc/crownos/process-monitor-helper.rules
+read-all-processes = *
+read-energy = *
+read-network-accounting = *
+read-gpu-counters = *
+control-fans = gid:998
+signal-other-users = uid:0

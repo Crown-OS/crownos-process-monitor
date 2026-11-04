@@ -1,0 +1,80 @@
+[workspace]
+members = [".", "crates/*"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+license = "GPL-3.0-or-later"
+
+[workspace.dependencies]
+monitor-core = { path = "crates/monitor-core" }
+monitor-system = { path = "crates/monitor-system" }
+monitor-io = { path = "crates/monitor-io" }
+monitor-hardware = { path = "crates/monitor-hardware" }
+monitor-alerts = { path = "crates/monitor-alerts" }
+monitor-history = { path = "crates/monitor-history" }
+monitor-engine = { path = "crates/monitor-engine" }
+
+anyhow = "1.0"
+thiserror = "2.0"
+memchr = "2.7"
+rustix = { version = "1.1", features = ["fs", "process", "net", "time", "param", "system", "pipe", "event"] }
+raw-cpuid = "11.6"
+regex-lite = "0.1"
+nvml-wrapper = "0.13"
+rusqlite = "0.41"
+zbus = { version = "6.2", default-features = false, features = ["tokio", "proxy", "service"] }
+tokio = { version = "1", default-features = false, features = ["rt", "sync", "time", "macros"] }
+netlink-sys = "0.9"
+netlink-packet-core = "0.9"
+netlink-packet-route = "0.34"
+netlink-packet-sock-diag = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+
+crownui = { path = "../crownui/crownui", default-features = false, features = ["wayland", "impeller", "static", "tokio"] }
+crownconfig = { path = "../crownui/crownconfig" }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+dbg_macro = "warn"
+todo = "warn"
+
+[package]
+name = "crownos-process-monitor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "crownos-process-monitor"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+crownui.workspace = true
+crownconfig.workspace = true
+monitor-core.workspace = true
+monitor-engine.workspace = true
+regex-lite.workspace = true
+serde.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+crowntest = { path = "../crownui/crowntest" }
+
+[lints]
+workspace = true
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
