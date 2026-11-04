@@ -22,6 +22,7 @@ const STARTUP_TIMEOUT: Duration = Duration::from_secs(5);
 struct PrivateBus {
     daemon: Child,
     address: String,
+    directory: PathBuf,
 }
 
 impl PrivateBus {
@@ -30,8 +31,8 @@ impl PrivateBus {
             eprintln!("{DAEMON} is not installed; skipping");
             return Ok(None);
         };
-        let directory = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-            .join(format!("{name}-{}", std::process::id()));
+        let directory =
+            std::env::temp_dir().join(format!("monitor-helper-{name}-{}", std::process::id()));
         std::fs::create_dir_all(&directory)?;
         let socket = directory.join("bus");
         let _ = std::fs::remove_file(&socket);
@@ -62,6 +63,7 @@ impl PrivateBus {
         let bus = Self {
             daemon: child,
             address: format!("unix:path={}", socket.display()),
+            directory,
         };
         let deadline = Instant::now() + STARTUP_TIMEOUT;
         while !socket.exists() {
@@ -84,6 +86,7 @@ impl Drop for PrivateBus {
     fn drop(&mut self) {
         let _ = self.daemon.kill();
         let _ = self.daemon.wait();
+        let _ = std::fs::remove_dir_all(&self.directory);
     }
 }
 
