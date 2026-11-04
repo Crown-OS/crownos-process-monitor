@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Process Monitor
+GenericName=System Monitor
+Comment=Watch processes, CPU, memory, disk, network and GPU usage
+Exec=crownos-process-monitor
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+Keywords=process;task;manager;cpu;memory;ram;gpu;network;disk;usage;kill;performance;
+StartupWMClass=crownos-process-monitor
