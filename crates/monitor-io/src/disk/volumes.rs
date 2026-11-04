@@ -325,6 +325,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "needs a block device mounted at /, which containers lack"]
     fn reads_the_live_mount_table() {
         let mut buffer = Vec::new();
         let Ok(text) = monitor_core::util::sysfs::read_into("/proc/self/mountinfo", &mut buffer)

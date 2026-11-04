@@ -285,6 +285,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore = "samples the block devices of a real machine, not a container"]
     fn samples_physical_disks_and_volumes() {
         let Ok(mut collector) = DiskCollector::new() else {
             return;

@@ -215,6 +215,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "expects the block devices of the development machine"]
     fn finds_both_nvme_drives_as_physical() {
         let disks = physical_disks();
         assert!(
