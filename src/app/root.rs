@@ -1,10 +1,8 @@
 use crownui::kit::{
     ButtonOptions, ButtonVariant, icon_button, icons, provide_configured_theme,
-    sidebar_with_header, slide_transition,
+    sidebar_with_header, slide_transition, title_bar_spacer, window_controls,
 };
-use crownui::prelude::{
-    Curve, Cx, Listeners, Styled, View, bind, component, spacer, vstack, zstack,
-};
+use crownui::prelude::{Curve, Cx, Listeners, Styled, View, bind, component, vstack, zstack};
 
 use monitor_engine::EngineControl;
 
@@ -39,10 +37,11 @@ pub(super) fn shell(cx: &mut Cx, state: AppState, navigation: Navigation) -> imp
     })
     .flex_1();
     let header = (
-        spacer(),
+        title_bar_spacer(),
         icon_button(icons::SETTINGS, "Settings")
             .variant(ButtonVariant::Ghost)
             .on_click(move |cx, _| settings_open.set(cx, true)),
+        window_controls(),
     );
     let backdrop = vstack(())
         .w_full()
