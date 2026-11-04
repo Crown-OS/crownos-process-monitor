@@ -139,12 +139,16 @@ fn samples_live_processes() -> SourceResult<()> {
 
     let members: u32 = table.apps.iter().map(|app| app.process_count).sum();
     assert_eq!(members as usize, table.processes.len());
-    assert!(
-        table
-            .apps
-            .iter()
-            .any(|app| app.kind == monitor_core::AppKind::Kernel)
-    );
+    let kernel_threads_visible =
+        std::fs::read_to_string("/proc/2/comm").is_ok_and(|comm| comm.trim_end() == "kthreadd");
+    if kernel_threads_visible {
+        assert!(
+            table
+                .apps
+                .iter()
+                .any(|app| app.kind == monitor_core::AppKind::Kernel)
+        );
+    }
     let own_app = &table.apps[own.app];
     assert!(own_app.process_count >= 1);
     if own_app.memory_method == MemoryMethod::Cgroup {
