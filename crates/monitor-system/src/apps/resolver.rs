@@ -108,8 +108,8 @@ impl AppResolver {
         let cgroup = parse_cgroup(facts.cgroup);
         let owns_scope = cgroup.owns_scope();
         let identity = match cgroup {
-            CgroupIdentity::Container(id) => {
-                Some(AppIdentity::new(AppKind::Container, id, id.into(), None))
+            CgroupIdentity::Container { id, name } => {
+                Some(AppIdentity::new(AppKind::Container, id, name.into(), None))
             }
             CgroupIdentity::Service(unit) => Some(self.service(&unit, facts)),
             _ if facts.uid != self.own_uid => Some(self.other_user(facts.uid)),
@@ -289,6 +289,29 @@ mod tests {
             resolver.by_name(&facts(1000, "crownbar", "/")).key.as_str(),
             "process:crownbar"
         );
+    }
+
+    #[test]
+    fn resolves_waydroid_as_one_android_app() {
+        let resolver = resolver();
+        for (uid, name, cgroup) in [
+            (0, "init", "/lxc.payload.waydroid"),
+            (10061, "com.android.settings", "/lxc.payload.waydroid"),
+            (1000, "system_server", "/lxc.payload.waydroid"),
+            (0, "lxc-start", "/lxc.monitor.waydroid"),
+        ] {
+            let resolved = resolver.direct(&facts(uid, name, cgroup));
+            let Some(Resolved {
+                identity,
+                owns_scope,
+            }) = resolved
+            else {
+                panic!("{name} was not resolved");
+            };
+            assert_eq!(identity.key.as_str(), "container:waydroid");
+            assert_eq!(&*identity.name, "Android");
+            assert!(owns_scope && identity.inheritable);
+        }
     }
 
     #[test]

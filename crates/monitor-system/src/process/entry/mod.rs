@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -9,7 +10,7 @@ use super::files::{IoCounters, SmapsRollup, StatusMemory};
 use super::privileged::PrivilegedFigures;
 use super::stat::{StatFields, parse_stat};
 use crate::apps::ProcessRole;
-use crate::apps::cgroup::unit_path;
+use crate::apps::cgroup::app_scope;
 use crate::apps::resolver::ProcessFacts;
 use crate::util::pid_path::PidPath;
 
@@ -208,11 +209,9 @@ impl ProcessEntry {
 
     /// Records that the process sits in its app's own unit.
     pub fn claim_scope(&mut self) {
-        let (unit, _) = unit_path(&self.cgroup);
-        self.scope_path = Some(if unit.len() == self.cgroup.len() {
-            self.cgroup.clone()
-        } else {
-            Arc::from(unit)
+        self.scope_path = Some(match app_scope(&self.cgroup) {
+            Cow::Borrowed(unit) if unit.len() == self.cgroup.len() => self.cgroup.clone(),
+            scope => Arc::from(scope),
         });
     }
 

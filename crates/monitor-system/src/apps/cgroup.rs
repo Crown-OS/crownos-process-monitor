@@ -4,6 +4,10 @@ use crate::util::text::unescape_unit;
 
 const CONTAINER_ID_LENGTH: usize = 12;
 const SERVICE_MANAGER_NAME: &str = "systemd";
+const LXC_PAYLOAD_PREFIX: &str = "lxc.payload.";
+const LXC_MONITOR_PREFIX: &str = "lxc.monitor.";
+const WAYDROID_CONTAINER: &str = "waydroid";
+const ANDROID_APP_NAME: &str = "Android";
 
 /// What a cgroup v2 path says about the app that owns a process, following
 /// the systemd desktop-environment naming conventions.
@@ -19,7 +23,13 @@ pub(crate) enum CgroupIdentity<'a> {
     Snap(&'a str),
     /// `<terminal>-<pid>-<n>.scope`, e.g. `kitty-1234-0.scope`.
     Terminal(&'a str),
-    Container(&'a str),
+    /// `docker-<id>.scope`, `libpod-<id>.scope`, or an LXC container's
+    /// `lxc.payload.<name>` and `lxc.monitor.<name>` cgroups. `name` is what
+    /// the table shows: "Android" for Waydroid's container.
+    Container {
+        id: &'a str,
+        name: &'a str,
+    },
     Service(Cow<'a, str>),
     /// A logind session scope, which holds whatever the session started.
     Session,
@@ -48,7 +58,11 @@ pub(crate) fn leaf(path: &str) -> &str {
 
 /// The innermost `.scope` or `.service` component and the path up to it.
 /// Services may keep processes in sub-cgroups (`systemd-udevd.service/udev`).
+/// An LXC container is one unit however deep its own processes nest.
 pub(crate) fn unit_path(path: &str) -> (&str, &str) {
+    if let Some(container) = lxc_unit(path) {
+        return container;
+    }
     let mut end = path.len();
     loop {
         let start = path[..end].rfind('/').map_or(0, |slash| slash + 1);
@@ -60,6 +74,36 @@ pub(crate) fn unit_path(path: &str) -> (&str, &str) {
             return (path, leaf(path));
         }
         end = start - 1;
+    }
+}
+
+/// The outermost `lxc.payload.<name>` or `lxc.monitor.<name>` component and
+/// the path up to it.
+fn lxc_unit(path: &str) -> Option<(&str, &str)> {
+    let mut start = 0;
+    path.split('/').find_map(|component| {
+        let end = start + component.len();
+        start = end + 1;
+        lxc_container_name(component).map(|_| (&path[..end], component))
+    })
+}
+
+fn lxc_container_name(component: &str) -> Option<&str> {
+    component
+        .strip_prefix(LXC_PAYLOAD_PREFIX)
+        .or_else(|| component.strip_prefix(LXC_MONITOR_PREFIX))
+}
+
+/// The cgroup whose counters describe a process's app: its unit, except that
+/// an LXC monitor answers for the payload cgroup of the container it runs.
+pub(crate) fn app_scope(path: &str) -> Cow<'_, str> {
+    let (unit, leaf) = unit_path(path);
+    match leaf.strip_prefix(LXC_MONITOR_PREFIX) {
+        Some(name) => {
+            let parent = &unit[..unit.len() - leaf.len()];
+            Cow::Owned(format!("{parent}{LXC_PAYLOAD_PREFIX}{name}"))
+        }
+        None => Cow::Borrowed(unit),
     }
 }
 
@@ -93,13 +137,35 @@ pub(crate) fn parse_cgroup(path: &str) -> CgroupIdentity<'_> {
 }
 
 fn container(leaf: &str) -> Option<CgroupIdentity<'_>> {
+    if let Some(name) = lxc_container_name(leaf) {
+        return Some(lxc_container(name));
+    }
     let id = ["docker-", "libpod-conmon-", "libpod-"]
         .iter()
         .find_map(|prefix| leaf.strip_prefix(prefix))?
         .strip_suffix(".scope")?;
-    Some(CgroupIdentity::Container(
-        &id[..id.len().min(CONTAINER_ID_LENGTH)],
-    ))
+    let id = &id[..id.len().min(CONTAINER_ID_LENGTH)];
+    Some(CgroupIdentity::Container { id, name: id })
+}
+
+/// LXC appends `-<n>` to a cgroup name an older cgroup still holds, so
+/// `waydroid-1` is Waydroid's container too.
+fn lxc_container(name: &str) -> CgroupIdentity<'_> {
+    let waydroid = name
+        .strip_prefix(WAYDROID_CONTAINER)
+        .is_some_and(|suffix| suffix.is_empty() || suffix.strip_prefix('-').is_some_and(numeric));
+    if waydroid {
+        CgroupIdentity::Container {
+            id: WAYDROID_CONTAINER,
+            name: ANDROID_APP_NAME,
+        }
+    } else {
+        CgroupIdentity::Container { id: name, name }
+    }
+}
+
+fn numeric(text: &str) -> bool {
+    !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn app_unit(body: &str) -> Option<CgroupIdentity<'_>> {
@@ -143,7 +209,6 @@ fn terminal(scope: &str) -> Option<CgroupIdentity<'_>> {
     let instance = parts.next()?;
     let pid = parts.next()?;
     let name = parts.next()?;
-    let numeric = |text: &str| !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit());
     (numeric(instance) && numeric(pid) && !name.is_empty())
         .then_some(CgroupIdentity::Terminal(name))
 }
@@ -222,14 +287,77 @@ mod tests {
             parse_cgroup(
                 "/system.slice/docker-4f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f.scope"
             ),
-            CgroupIdentity::Container("4f2a9c1d8e7b")
+            container("4f2a9c1d8e7b")
         );
         assert_eq!(
             parse_cgroup(
                 "/user.slice/user-1000.slice/user@1000.service/user.slice/libpod-0123456789abcdef.scope"
             ),
-            CgroupIdentity::Container("0123456789ab")
+            container("0123456789ab")
         );
+    }
+
+    fn container(id: &str) -> CgroupIdentity<'_> {
+        CgroupIdentity::Container { id, name: id }
+    }
+
+    const ANDROID: CgroupIdentity<'static> = CgroupIdentity::Container {
+        id: "waydroid",
+        name: "Android",
+    };
+
+    #[test]
+    fn parses_waydroid_as_android() {
+        assert_eq!(parse_cgroup("/lxc.payload.waydroid"), ANDROID);
+        assert_eq!(parse_cgroup("/lxc.monitor.waydroid"), ANDROID);
+        assert_eq!(parse_cgroup("/lxc.payload.waydroid-1"), ANDROID);
+        assert_eq!(
+            parse_cgroup("/lxc.payload.waydroid/uid_10061/pid_4242"),
+            ANDROID
+        );
+        assert_eq!(
+            parse_cgroup(
+                "/user.slice/user-1000.slice/user@1000.service/app.slice/lxc-waydroid-3.scope/lxc.payload.waydroid"
+            ),
+            ANDROID
+        );
+        assert!(ANDROID.owns_scope());
+    }
+
+    #[test]
+    fn parses_other_lxc_containers() {
+        assert_eq!(parse_cgroup("/lxc.payload.web"), container("web"));
+        assert_eq!(
+            parse_cgroup("/lxc.monitor.waydroid-test"),
+            container("waydroid-test")
+        );
+        assert_eq!(
+            parse_cgroup("/lxc.payload.debian/system.slice/sshd.service"),
+            container("debian")
+        );
+        assert_eq!(parse_cgroup("/lxc.pivot"), CgroupIdentity::Unknown);
+    }
+
+    #[test]
+    fn scopes_lxc_containers_by_payload() {
+        assert_eq!(app_scope("/lxc.payload.waydroid"), "/lxc.payload.waydroid");
+        assert_eq!(
+            app_scope("/lxc.payload.waydroid/uid_10061/pid_4242"),
+            "/lxc.payload.waydroid"
+        );
+        assert_eq!(app_scope("/lxc.monitor.waydroid"), "/lxc.payload.waydroid");
+        assert_eq!(
+            app_scope("/machine.slice/lxc.monitor.waydroid-1"),
+            "/machine.slice/lxc.payload.waydroid-1"
+        );
+        assert_eq!(
+            app_scope("/system.slice/systemd-udevd.service/udev"),
+            "/system.slice/systemd-udevd.service"
+        );
+        assert!(matches!(
+            app_scope("/system.slice/sshd.service"),
+            Cow::Borrowed(_)
+        ));
     }
 
     #[test]

@@ -85,7 +85,7 @@ fn detect_sandbox(
                 name: name.to_owned(),
             };
         }
-        CgroupIdentity::Container(id) => return Sandbox::Container { id: id.to_owned() },
+        CgroupIdentity::Container { id, .. } => return Sandbox::Container { id: id.to_owned() },
         _ => {}
     }
     if let Some(name) = executable
