@@ -1,9 +1,12 @@
+use std::path::Path;
+
 use monitor_core::{AppKind, ProcessKey};
 
 use super::verdict::{RefuseReason, Verdict, verdict};
 use super::{ActionError, AppAction, ProcessAction, perform};
 use crate::apps::scope::CGROUP_ROOT;
 use crate::process::ProcessTable;
+use crate::util::cgroup_procs::subtree_process_count;
 
 fn members(table: &ProcessTable, app: usize) -> impl Iterator<Item = ProcessKey> + '_ {
     table.processes_of(app).map(|row| row.key)
@@ -29,16 +32,14 @@ pub fn app_verdict(table: &ProcessTable, app: usize, action: AppAction) -> Verdi
 }
 
 /// How many processes the action reaches, for the confirmation text. An
-/// app scope counts every process in it, including ones not yet sampled.
+/// app scope counts every process in it and in the cgroups below it, such as
+/// Android's own, including ones not yet sampled.
 pub fn processes_affected(table: &ProcessTable, app: usize) -> usize {
     let scope_count = table
         .apps
         .get(app)
         .and_then(|row| row.scope.as_ref())
-        .and_then(|scope| {
-            std::fs::read_to_string(format!("{CGROUP_ROOT}{scope}/cgroup.procs")).ok()
-        })
-        .map(|procs| procs.lines().filter(|line| !line.is_empty()).count());
+        .and_then(|scope| subtree_process_count(Path::new(&format!("{CGROUP_ROOT}{scope}"))));
     scope_count.unwrap_or_else(|| members(table, app).count())
 }
 

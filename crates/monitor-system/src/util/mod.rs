@@ -1,3 +1,4 @@
+pub(crate) mod cgroup_procs;
 pub(crate) mod clock;
 pub(crate) mod cpulist;
 pub(crate) mod passwd;
