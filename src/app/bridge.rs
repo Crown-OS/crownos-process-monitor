@@ -29,6 +29,7 @@ use self::apps::AppListFiller;
 use super::live::LiveSnapshot;
 use super::navigation::{Navigation, Page};
 use super::state::AppState;
+use crate::settings::CpuScale;
 
 pub use self::settings::engine_settings;
 
@@ -47,6 +48,21 @@ pub fn start(cx: &mut Cx, state: AppState, navigation: Navigation, engine: Engin
         apps: AppListFiller::new(),
     };
     pump(cx, engine.snapshots(), feed);
+}
+
+/// The live snapshot the feed builds from `ticks`, without an engine: headless renders replay
+/// recorded or synthetic ticks through the same path as the live feed.
+pub fn replay(ticks: impl IntoIterator<Item = Arc<Snapshot>>, cpu_scale: CpuScale) -> LiveSnapshot {
+    let mut live = LiveSnapshot::default();
+    readings::prepare(&mut live);
+    for tick in ticks {
+        readings::append(&mut live, &tick);
+        live.tick = tick;
+    }
+    let tick = Arc::clone(&live.tick);
+    AppListFiller::new().refill(&mut live.apps, &tick.processes, cpu_scale);
+    live.details.refill(&live.apps, &tick);
+    live
 }
 
 struct Feed {

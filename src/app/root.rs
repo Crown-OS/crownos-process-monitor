@@ -29,7 +29,7 @@ pub fn root(initial: MonitorSettings, writer: SettingsWriter, engine: EngineCont
 }
 
 /// Everything the window draws over a given state and page.
-pub(super) fn shell(cx: &mut Cx, state: AppState, navigation: Navigation) -> impl View + use<> {
+pub fn shell(cx: &mut Cx, state: AppState, navigation: Navigation) -> impl View + use<> {
     let theme = state.theme;
     let settings_open = cx.signal(false);
     let content = slide_transition(navigation.current(), move |cx, index| {

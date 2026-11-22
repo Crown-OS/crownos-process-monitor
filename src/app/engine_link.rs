@@ -11,10 +11,14 @@ use tokio::sync::broadcast;
 
 const NO_ENGINE: &str = "the monitoring engine";
 
+/// Answers inspections in place of the engine, for headless renders.
+pub type OfflineInspector = fn(ProcessKey) -> SourceResult<ProcessDetails>;
+
 struct Shared {
     control: Option<EngineControl>,
     history_path: Option<Arc<Path>>,
     reader: Mutex<Option<HistoryReader>>,
+    offline_inspector: Option<OfflineInspector>,
 }
 
 /// The window's one handle on the engine: commands, action outcomes, inspection, plus one
@@ -30,6 +34,21 @@ impl EngineLink {
             control: Some(control),
             history_path,
             reader: Mutex::new(None),
+            offline_inspector: None,
+        }))
+    }
+
+    /// A link without an engine: history read from `history_path`, inspections answered by
+    /// `inspector`, commands dropped.
+    pub fn offline(
+        history_path: impl Into<std::path::PathBuf>,
+        inspector: OfflineInspector,
+    ) -> Self {
+        Self(Arc::new(Shared {
+            control: None,
+            history_path: Some(Arc::from(history_path.into())),
+            reader: Mutex::new(None),
+            offline_inspector: Some(inspector),
         }))
     }
 
@@ -40,6 +59,7 @@ impl EngineLink {
             control: None,
             history_path: Some(Arc::from(path.into())),
             reader: Mutex::new(None),
+            offline_inspector: None,
         }))
     }
 
@@ -68,10 +88,12 @@ impl EngineLink {
         key: ProcessKey,
     ) -> impl Future<Output = SourceResult<ProcessDetails>> + Send + use<> {
         let answer = self.0.control.as_ref().map(|control| control.inspect(key));
+        let offline_inspector = self.0.offline_inspector;
         async move {
-            match answer {
-                Some(answer) => answer.await,
-                None => Err(SourceError::Unavailable(NO_ENGINE)),
+            match (answer, offline_inspector) {
+                (Some(answer), _) => answer.await,
+                (None, Some(inspector)) => inspector(key),
+                (None, None) => Err(SourceError::Unavailable(NO_ENGINE)),
             }
         }
     }

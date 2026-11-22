@@ -1,7 +1,7 @@
 # CrownOS Process Monitor: Implementation Blueprint
 
 Status: research complete, decisions recorded (§11). No implementation code written yet.
-Target: a Linux-native counterpart to Vitals for macOS (vitalsmac.com, v1.9.7), built only with **CrownUI**, with exactly six sidebar pages: **Overview, CPU, GPU, Memory, Disk, Network**.
+Target: a Linux-native system monitor, built only with **CrownUI**, with exactly six sidebar pages: **Overview, CPU, GPU, Memory, Disk, Network**.
 
 ---
 
@@ -238,7 +238,7 @@ Legend used below:
 
 ### 1.8 Process Inspector (drawer, opened from any table)
 
-The macOS concepts don't exist on Linux, so each section maps to the nearest real Linux equivalent:
+Each section maps to the nearest real Linux equivalent:
 
 | Section | Linux content |
 |---|---|
